@@ -1,0 +1,124 @@
+<!--地震の大きさで色変更-->
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>ヒートマップレイヤーの作成</title>
+<meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+<link href="https://api.mapbox.com/mapbox-gl-js/v2.6.1/mapbox-gl.css" rel="stylesheet">
+<script src="https://api.mapbox.com/mapbox-gl-js/v2.6.1/mapbox-gl.js"></script>
+<style>
+body { margin: 0; padding: 0; }
+#map { position: absolute; top: 0; bottom: 0; width: 100%; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+ 
+<script>
+	// TO MAKE THE MAP APPEAR YOU MUSTマップを表示するには、次のことを行う必要があります
+	// ADD YOUR ACCESS TOKEN FROM
+	// https://account.mapbox.com
+	mapboxgl.accessToken = 'pk.eyJ1Ijoia2ltb3RvcnlvdWdhMTExMSIsImEiOiJjbDZ4dTVwZXAwMjQwM2pwN2tyOWsyeDBsIn0.5j76S4TqFfP51tDI-naFXw';
+const map = new mapboxgl.Map({
+container: 'map',
+style: 'mapbox://styles/mapbox/dark-v10',
+center: [-120, 50],
+zoom: 2
+});
+ 
+map.on('load', () => {
+// Add a geojson point source. geojson ポイント ソースを追加します。
+// Heatmap layers also work with a vector tile source. ヒートマップ レイヤーはベクター タイル ソースでも機能します
+map.addSource('earthquakes', {
+'type': 'geojson',
+'data': 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson'
+});
+ 
+map.addLayer(
+{
+'id': 'earthquakes-heat',
+'type': 'heatmap',
+'source': 'earthquakes',
+'maxzoom': 9,
+'paint': {
+
+// Adjust the heatmap radius by zoom level
+//ズーム レベルでヒートマップの半径を調整する
+'heatmap-radius': [
+'interpolate',
+['linear'],
+['zoom'],
+0,
+2,
+9,
+20
+],
+// Transition from heatmap to circle layer by zoom level
+//ズーム レベルによるヒートマップからサークル レイヤーへの遷移
+'heatmap-opacity': ['interpolate',['linear'],['zoom'],7,1,9,0]
+}
+},
+'waterway-label'
+);
+ 
+map.addLayer(
+{
+'id': 'earthquakes-point',
+'type': 'circle',
+'source': 'earthquakes',
+'minzoom': 7,
+'paint': {
+// Size circle radius by earthquake magnitude and zoom level
+//地震のマグニチュードとズーム レベルで円の半径を調整する
+'circle-radius': [
+'interpolate',
+['linear'],
+['zoom'],
+7,
+['interpolate', ['linear'], ['get', 'mag'], 1, 1, 6, 4],
+16,
+['interpolate', ['linear'], ['get', 'mag'], 1, 5, 6, 50]
+],
+// Color circle by earthquake magnitude
+//マグニチュード別カラーサークル
+'circle-color': [
+'interpolate',
+['linear'],
+['get', 'mag'],
+1,
+'rgba(33,102,172,0)',
+2,
+'rgb(103,169,207)',
+3,
+'rgb(209,229,240)',
+4,
+'rgb(253,219,199)',
+5,
+'rgb(239,138,98)',
+6,
+'rgb(178,24,43)'
+],
+'circle-stroke-color': 'white',
+'circle-stroke-width': 1,
+// Transition from heatmap to circle layer by zoom level
+//ズーム レベルによるヒートマップからサークル レイヤーへの遷移
+'circle-opacity': [
+'interpolate',
+['linear'],
+['zoom'],
+7,
+0,
+8,
+1
+]
+}
+},
+'waterway-label'
+);
+});
+</script>
+ 
+</body>
+</html>

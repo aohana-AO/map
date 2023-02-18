@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>ヒートマップレイヤーの作成</title>
+<meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+<link href="https://api.mapbox.com/mapbox-gl-js/v2.6.1/mapbox-gl.css" rel="stylesheet">
+<script src="https://api.mapbox.com/mapbox-gl-js/v2.6.1/mapbox-gl.js"></script>
+<style>
+body { margin: 0; padding: 0; }
+#map { position: absolute; top: 0; bottom: 0; width: 100%; }
+#menu {
+    position: absolute; top: 3%; bottom: 0; left: 2%; width: 200px;height: 130px;background-color: aliceblue;
+}
+#range {
+    position: absolute; top: 65%; bottom: 0; left: 8%; width: 80%;height: 30%;
+}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="menu">
+    
+    
+    <form style="text-align: center;margin:auto;" method="post">
+        <div>
+            <br>
+          <label for="range-example">
+          <span class="eva">過去1日間</span>の地震マップ
+          </label><hr>
+          <input type="radio" id="apple" name="fruit" value="頻度" onchange="func1()" checked>
+  <label for="apple">頻度map</label>
+  <input type="radio" id="banana" name="fruit" value="震度" onchange="func1()">
+  <label for="banana">震度map</label><br><br><br>
+
+
+          <input type="range" name="range-example" id="range" min="1" max="4" step="1" /> 
+        </div>
+      </form>
+
+</div>
+ 
+
+<script>
+var kikan = 'day';
+
+window.onload = function () {
+ 
+ var hoge = document.getElementById("range");
+ // 選択した際のイベント取得
+console.log(hoge.value);
+
+hoge.addEventListener('change', (e) => {
+    if(hoge.value==1){
+
+        document.getElementsByClassName('eva')[0].textContent = "過去30日間";
+        console.log(hoge.value);
+        var kikan = 'month';
+        
+
+    }else if(hoge.value==2){
+        document.getElementsByClassName('eva')[0].textContent = "過去7日間";
+        console.log(hoge.value);
+        var kikan = 'week';
+
+    }else if(hoge.value==3){
+        document.getElementsByClassName('eva')[0].textContent = "過去1日間";
+        console.log(hoge.value);
+        var kikan = 'day';
+
+    }else{
+        document.getElementsByClassName('eva')[0].textContent = "過去1時間";
+        console.log(hoge.value);
+        var kikan = 'hour';
+
+    }
+
+    function func1() {
+    var fruits = document.getElementsByName("fruit");
+    for(var i = 0; i < fruits.length; i++){
+      if(fruits[i].checked) {
+        console.log("選択された値：", fruits[i].value);
+        return fruits[i].value;
+      }
+    }
+  }
+  console.log(func1());
+  
+
+var date = 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_'+kikan+'.geojson';
+
+
+
+if(func1()=='震度'){
+    console.log(111);
+	// TO MAKE THE MAP APPEAR YOU MUSTマップを表示するには、次のことを行う必要があります
+	// ADD YOUR ACCESS TOKEN FROM
+	// https://account.mapbox.com
+	mapboxgl.accessToken = 'pk.eyJ1Ijoia2ltb3RvcnlvdWdhMTExMSIsImEiOiJjbDZ4dTVwZXAwMjQwM2pwN2tyOWsyeDBsIn0.5j76S4TqFfP51tDI-naFXw';
+const map = new mapboxgl.Map({
+container: 'map',
+style: 'mapbox://styles/mapbox/dark-v10',
+center: [-120, 50],
+zoom: 2
+});
+ 
+map.on('load', () => {
+// Add a geojson point source. geojson ポイント ソースを追加します。
+// Heatmap layers also work with a vector tile source. ヒートマップ レイヤーはベクター タイル ソースでも機能します
+map.addSource('earthquakes', {
+'type': 'geojson',
+'data': date
+});
+ 
+map.addLayer(
+{
+'id': 'earthquakes-heat',
+'type': 'heatmap',
+'source': 'earthquakes',
+'maxzoom': 9,
+'paint': {
+
+// Adjust the heatmap radius by zoom level
+//ズーム レベルでヒートマップの半径を調整する
+'heatmap-radius': [
+'interpolate',
+['linear'],
+['zoom'],
+0,
+2,
+9,
+20
+],
+// Transition from heatmap to circle layer by zoom level
+//ズーム レベルによるヒートマップからサークル レイヤーへの遷移
+'heatmap-opacity': ['interpolate',['linear'],['zoom'],7,1,9,0]
+}
+},
+'waterway-label'
+);
+ 
+map.addLayer(
+{
+'id': 'earthquakes-point',
+'type': 'circle',
+'source': 'earthquakes',
+'minzoom': 7,
+'paint': {
+// Size circle radius by earthquake magnitude and zoom level
+//地震のマグニチュードとズーム レベルで円の半径を調整する
+'circle-radius': [
+'interpolate',
+['linear'],
+['zoom'],
+7,
+['interpolate', ['linear'], ['get', 'mag'], 1, 1, 6, 4],
+16,
+['interpolate', ['linear'], ['get', 'mag'], 1, 5, 6, 50]
+],
+// Color circle by earthquake magnitude
+//マグニチュード別カラーサークル
+'circle-color': [
+'interpolate',
+['linear'],
+['get', 'mag'],
+1,
+'rgba(33,102,172,0)',
+2,
+'rgb(103,169,207)',
+3,
+'rgb(209,229,240)',
+4,
+'rgb(253,219,199)',
+5,
+'rgb(239,138,98)',
+6,
+'rgb(178,24,43)'
+],
+'circle-stroke-color': 'white',
+'circle-stroke-width': 1,
+// Transition from heatmap to circle layer by zoom level
+//ズーム レベルによるヒートマップからサークル レイヤーへの遷移
+'circle-opacity': [
+'interpolate',
+['linear'],
+['zoom'],
+7,
+0,
+8,
+1
+]
+}
+},
+'waterway-label'
+);
+});
+}else{
+
+
+
+
+// TO MAKE THE MAP APPEAR YOU MUSTマップを表示するには、次のことを行う必要があります
+// ADD YOUR ACCESS TOKEN FROM
+// https://account.mapbox.com
+mapboxgl.accessToken = 'pk.eyJ1Ijoia2ltb3RvcnlvdWdhMTExMSIsImEiOiJjbDZ4dTVwZXAwMjQwM2pwN2tyOWsyeDBsIn0.5j76S4TqFfP51tDI-naFXw';
+const map = new mapboxgl.Map({
+container: 'map',
+style: 'mapbox://styles/mapbox/dark-v10',
+center: [-120, 50],
+zoom: 2
+});
+
+map.on('load', () => {
+// Add a geojson point source. geojson ポイント ソースを追加します。
+// Heatmap layers also work with a vector tile source. ヒートマップ レイヤーはベクター タイル ソースでも機能します
+map.addSource('earthquakes', {
+'type': 'geojson',
+'data': date
+});
+
+map.addLayer(
+{
+'id': 'earthquakes-heat',
+'type': 'heatmap',
+'source': 'earthquakes',
+'maxzoom': 9,
+'paint': {
+// Increase the heatmap weight based on frequency and property magnitude 
+//頻度とプロパティの大きさに基づいてヒートマップの重みを増やします
+'heatmap-weight': [
+'interpolate',
+['linear'],
+['get', 'mag'],
+0,
+0,
+6,
+1
+],
+// Increase the heatmap color weight weight by zoom level
+//ズーム レベルごとにヒートマップの色の重みを増やします
+// heatmap-intensity is a multiplier on top of heatmap-weight
+//heatmap-intensity は heatmap-weight の乗数です
+'heatmap-intensity': [
+'interpolate',
+['linear'],
+['zoom'],
+0,
+1,
+9,
+3
+],
+// Color ramp for heatmap.  Domain is 0 (low) to 1 (high).
+//ヒートマップのカラー ランプ。ドメインは 0 (低) から 1 (高) です。
+// Begin color ramp at 0-stop with a 0-transparancy color
+//透明度 0 のカラーで 0 ストップのカラー ランプを開始します。
+// to create a blur-like effect.
+//ぼかしのような効果を作成します。
+'heatmap-color': [
+'interpolate',
+['linear'],
+['heatmap-density'],
+0,
+'rgba(33,102,172,0)',
+0.2,
+'rgb(103,169,207)',
+0.4,
+'rgb(209,229,240)',
+0.6,
+'rgb(253,219,199)',
+0.8,
+'rgb(239,138,98)',
+1,
+'rgb(178,24,43)'
+],
+// Adjust the heatmap radius by zoom level
+//ズーム レベルでヒートマップの半径を調整する
+'heatmap-radius': [
+'interpolate',
+['linear'],
+['zoom'],
+0,
+2,
+9,
+20
+],
+// Transition from heatmap to circle layer by zoom level
+//ズーム レベルによるヒートマップからサークル レイヤーへの遷移
+'heatmap-opacity': ['interpolate',['linear'],['zoom'],7,1,9,0]
+}
+},
+'waterway-label'
+);
+
+map.addLayer(
+{
+'id': 'earthquakes-point',
+'type': 'circle',
+'source': 'earthquakes',
+'minzoom': 7,
+'paint': {
+
+// Transition from heatmap to circle layer by zoom level
+//ズーム レベルによるヒートマップからサークル レイヤーへの遷移
+'circle-opacity': [
+'interpolate',
+['linear'],
+['zoom'],
+7,
+0,
+8,
+1
+]
+}
+},
+'waterway-label'
+);
+});}
+
+});
+
+}
+
+var date = 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_'+kikan+'.geojson';
+
+
+
+
+
+	// TO MAKE THE MAP APPEAR YOU MUSTマップを表示するには、次のことを行う必要があります
+	// ADD YOUR ACCESS TOKEN FROM
+	// https://account.mapbox.com
+	mapboxgl.accessToken = 'pk.eyJ1Ijoia2ltb3RvcnlvdWdhMTExMSIsImEiOiJjbDZ4dTVwZXAwMjQwM2pwN2tyOWsyeDBsIn0.5j76S4TqFfP51tDI-naFXw';
+const map = new mapboxgl.Map({
+container: 'map',
+style: 'mapbox://styles/mapbox/dark-v10',
+center: [-120, 50],
+zoom: 2
+});
+ 
+map.on('load', () => {
+// Add a geojson point source. geojson ポイント ソースを追加します。
+// Heatmap layers also work with a vector tile source. ヒートマップ レイヤーはベクター タイル ソースでも機能します
+map.addSource('earthquakes', {
+'type': 'geojson',
+'data': date
+});
+ 
+map.addLayer(
+{
+'id': 'earthquakes-heat',
+'type': 'heatmap',
+'source': 'earthquakes',
+'maxzoom': 9,
+'paint': {
+// Increase the heatmap weight based on frequency and property magnitude 
+//頻度とプロパティの大きさに基づいてヒートマップの重みを増やします
+'heatmap-weight': [
+'interpolate',
+['linear'],
+['get', 'mag'],
+0,
+0,
+6,
+1
+],
+// Increase the heatmap color weight weight by zoom level
+//ズーム レベルごとにヒートマップの色の重みを増やします
+// heatmap-intensity is a multiplier on top of heatmap-weight
+//heatmap-intensity は heatmap-weight の乗数です
+'heatmap-intensity': [
+'interpolate',
+['linear'],
+['zoom'],
+0,
+1,
+9,
+3
+],
+// Color ramp for heatmap.  Domain is 0 (low) to 1 (high).
+//ヒートマップのカラー ランプ。ドメインは 0 (低) から 1 (高) です。
+// Begin color ramp at 0-stop with a 0-transparancy color
+//透明度 0 のカラーで 0 ストップのカラー ランプを開始します。
+// to create a blur-like effect.
+//ぼかしのような効果を作成します。
+'heatmap-color': [
+'interpolate',
+['linear'],
+['heatmap-density'],
+0,
+'rgba(33,102,172,0)',
+0.2,
+'rgb(103,169,207)',
+0.4,
+'rgb(209,229,240)',
+0.6,
+'rgb(253,219,199)',
+0.8,
+'rgb(239,138,98)',
+1,
+'rgb(178,24,43)'
+],
+// Adjust the heatmap radius by zoom level
+//ズーム レベルでヒートマップの半径を調整する
+'heatmap-radius': [
+'interpolate',
+['linear'],
+['zoom'],
+0,
+2,
+9,
+20
+],
+// Transition from heatmap to circle layer by zoom level
+//ズーム レベルによるヒートマップからサークル レイヤーへの遷移
+'heatmap-opacity': ['interpolate',['linear'],['zoom'],7,1,9,0]
+}
+},
+'waterway-label'
+);
+ 
+map.addLayer(
+{
+'id': 'earthquakes-point',
+'type': 'circle',
+'source': 'earthquakes',
+'minzoom': 7,
+'paint': {
+
+// Transition from heatmap to circle layer by zoom level
+//ズーム レベルによるヒートマップからサークル レイヤーへの遷移
+'circle-opacity': [
+'interpolate',
+['linear'],
+['zoom'],
+7,
+0,
+8,
+1
+]
+}
+},
+'waterway-label'
+);
+});
+</script>
+ 
+</body>
+</html>
